@@ -1,6 +1,7 @@
 const { Telegraf } = require("telegraf")
 const { Storage } = require('./database.js')
 const { Auth } = require("googleapis");
+const { extractChannel, getYoutubeLink } = require('./youtube.js')
 
 const storage = Storage.memory()
 const bot = new Telegraf(process.env.BOT_TOKEN);
@@ -45,7 +46,7 @@ bot.command(['ls', 'list_channels'], (ctx) => {
     console.log(`/ls user channels list => ${JSON.stringify(channels, null, 2)}`)
     if (channels.length > 0) {
         for (const channel of channels) {
-            reply += `* https://www.youtube.com/@${channel}\n`
+            reply += `* ${getYoutubeLink(channel)}\n`
         }
         ctx.replyWithHTML(`Your channels:\n${reply}`)
     } else {
@@ -65,23 +66,6 @@ function extractValue(rawMessage, commands) {
         }
     }
     return null;
-}
-
-
-function extractChannel(rawChannel) {
-    const patterns = [
-        /^https:\/\/(www.)?youtube.com\/@?(?<channel_name>\w+)$/,
-        /^(www.)youtube.com\/@(?<channel_name>\w+)$/,
-        /^@(?<channel_name>\w+)$/,
-    ];
-
-    for (const pattern of patterns) {
-        const result = pattern.exec(rawChannel)?.groups?.channel_name || null
-        if (result !== null) {
-            return result
-        }
-    }
-    return null
 }
 
 
