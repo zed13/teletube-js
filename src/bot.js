@@ -15,9 +15,6 @@ bot.start(ctx => {
 })
 
 const oauth2client = new Auth.OAuth2Client({
-    clientId: "1005400647137-02h4tc9kjoqmi0nh775mfbstqrvmnkdr.apps.googleusercontent.com",
-    clientSecret: "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",
-    redirectUri: "http://localhost:3000/oauth2callback",
 });
 
 bot.command(["add", "add_channel"], ctx => {
