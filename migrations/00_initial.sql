@@ -12,7 +12,8 @@ CREATE TABLE IF NOT EXISTS teleUsers(
 );
 
 CREATE TABLE IF NOT EXISTS channels(
-    channel TEXT PRIMARY KEY
+    youtubeId TEXT PRIMARY KEY,
+    title TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS teleUserToYoutubeChannel(

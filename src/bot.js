@@ -1,9 +1,11 @@
-const { Telegraf } = require("telegraf")
+const { Telegraf, Markup } = require("telegraf")
 const { Storage } = require('./database.js')
 const { Auth } = require("googleapis");
-const { extractChannel, getYoutubeLink } = require('./youtube.js')
+const { extractChannel, getYoutubeLink, searchChannel } = require('./youtube.js')
 
 const storage = Storage.memory()
+
+console.log(`Reading bot token from env variable BOT_TOKEN=${process.env.BOT_TOKEN}`)
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
 // Uncomment to enable logs
@@ -14,10 +16,16 @@ bot.start(ctx => {
     ctx.reply("This bot help you get updates from youtube subscriptions.")
 })
 
-const oauth2client = new Auth.OAuth2Client({
-});
+function buildChannelSearchVariants(searchResposne) {
+    const keyboard = []
+    for (const channel of searchResposne.data.items) {
+        keyboard.push([Markup.callbackButton(channel.snippet.channelTitle, `new_channel_${channel.id.channelId}`)])
+    }
+    return Markup.inlineKeyboard(keyboard)
+        .extra()
+}
 
-bot.command(["add", "add_channel"], ctx => {
+bot.command(["add", "add_channel"], async (ctx) => {
     console.log(ctx.message.text);
     const message = ctx.message.text;
     const commandArg = extractValue(message, ['add', 'add_channel'])
@@ -25,14 +33,28 @@ bot.command(["add", "add_channel"], ctx => {
     const channel = extractChannel(commandArg);
     console.log(`User specify channel => ${channel}`)
     const user = storage.users.getOrCreateWith(ctx.message.from.id)
-    if (user != null && channel != null) {
-        storage.channels.addChannel(channel, ctx.message.from.id)
-        storage.channels.bindChannel(channel, user)
-        ctx.reply(`Channel ${channel} is successfully added to your list`)
-    } else {
-        ctx.reply(`Failed to add channel to your list`);
+    try {
+        const searchResponse = await searchChannel(channel)
+        console.log(`channel '${channel} is found on youtube; resposne => ${JSON.stringify(searchResponse, null, 2)}'`)
+        ctx.reply(`Find channels for name ${channel}`, buildChannelSearchVariants(searchResponse))
+    } catch (err) {
+        console.log(`Error on attempt to request channel ${channel}`)
+        console.log(err)
     }
+    // if (user != null && channel != null) {
+    //     storage.channels.addChannel(channel, ctx.message.from.id)
+    //     storage.channels.bindChannel(channel, user)
+    //     ctx.reply(`Channel ${channel} is successfully added to your list`)
+    // } else {
+    //     ctx.reply(`Failed to add channel to your list`);
+    // }
 });
+
+bot.action(/new_channel_+/, (ctx) => {
+    const channelId = ctx.match.input.substring(13)
+    ctx.editMessageReplyMarkup(Markup.removeKeyboard())
+    ctx.reply(`Channel with id=${channelId} is selected`)
+})
 
 bot.command(['ls', 'list_channels'], (ctx) => {
     let reply = '';
